@@ -8,13 +8,20 @@ import { DiagnosisResult } from '../components/DiagnosisResult';
 import { ActionButton } from '../components/ActionButton';
 
 const Home: React.FC = () => {
-    const { appState, transcription, diagnosis, error, actions } = useMedCopilot();
+ const { appState, transcription, editedTranscription, diagnosis, error, actions } = useMedCopilot();
 
     const renderContent = () => {
         switch (appState) {
             case AppState.IDLE:
             case AppState.RECORDING:
-                return <TranscriptionView transcription={transcription} />;
+            case AppState.EDITING:
+                return <TranscriptionView 
+                    transcription={transcription}
+                    editedTranscription={editedTranscription}
+                    isEditing={appState === AppState.EDITING}
+                    onToggleEdit={actions.switchToEdit}
+                    onTextChange={actions.setEditedTranscription}
+                />;
             case AppState.PROCESSING:
                 return <ProcessingView />;
             case AppState.RESULT:
@@ -27,18 +34,17 @@ const Home: React.FC = () => {
     };
 
     return (
-        <div >
-            <Layout >
-                <StatusBar appState={appState} />
-                {renderContent()}
-                <ActionButton 
-                    appState={appState}
-                    onStart={actions.start}
-                    onStop={actions.stop}
-                    onReset={actions.reset}
-                />
-            </Layout>
-        </div>
+        <Layout>
+            <StatusBar appState={appState} />
+            {renderContent()}
+            <ActionButton 
+                appState={appState}
+                onStart={actions.start}
+                onStop={actions.stopAndProcess}
+                onGenerate={actions.generateFromEdited}
+                onReset={actions.reset}
+            />
+        </Layout>
     );
 };
 

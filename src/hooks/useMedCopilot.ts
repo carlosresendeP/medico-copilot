@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback } from 'react';
 import { LiveServerMessage } from '@google/genai';
-import  { AppState,type DiagnosisReport } from '../types';
+import { AppState, type DiagnosisReport } from '../types';
 import { connectForTranscription, generateDiagnosisFromText } from '../services/geminiService';
 import { createBlob } from '../utils/audioUtils';
 import type { Blob } from '@google/genai';
@@ -13,6 +13,7 @@ type LiveSession = {
 export const useMedCopilot = () => {
     const [appState, setAppState] = useState<AppState>(AppState.IDLE);
     const [transcription, setTranscription] = useState<string>('');
+    const [editedTranscription, setEditedTranscription] = useState('');
     const [diagnosis, setDiagnosis] = useState<DiagnosisReport | null>(null);
     const [error, setError] = useState<string | null>(null);
 
@@ -23,7 +24,6 @@ export const useMedCopilot = () => {
     const mediaStreamRef = useRef<MediaStream | null>(null);
     const fullTranscriptionRef = useRef<string>('');
 
-    // função para limpar recursos de áudio
     const cleanupAudio = useCallback(() => {
         if (mediaStreamRef.current) {
             mediaStreamRef.current.getTracks().forEach(track => track.stop());
@@ -49,27 +49,16 @@ export const useMedCopilot = () => {
         }
     }, []);
 
-
-    // função para parar a gravação
-    const handleStopRecording = useCallback(async (isError = false) => {
-        if (appState !== AppState.RECORDING) return;
-        
-        cleanupAudio();
-
-        if (isError) {
-            setAppState(AppState.ERROR);
-            return;
-        }
-
-        if (fullTranscriptionRef.current.trim().length < 10) {
-            setError('A transcrição é muito curta para gerar um diagnóstico. Fale um pouco mais.');
+    const processTranscription = useCallback(async (text: string) => {
+        if (text.trim().length < 10) {
+            setError('A transcrição é muito curta para gerar um diagnóstico. Fale ou escreva um pouco mais.');
             setAppState(AppState.ERROR);
             return;
         }
         
         setAppState(AppState.PROCESSING);
         try {
-            const result = await generateDiagnosisFromText(fullTranscriptionRef.current);
+            const result = await generateDiagnosisFromText(text);
             setDiagnosis(result);
             setAppState(AppState.RESULT);
         } catch (err) {
@@ -77,14 +66,32 @@ export const useMedCopilot = () => {
             setError('A IA não conseguiu gerar um diagnóstico. Por favor, tente novamente com uma transcrição mais clara.');
             setAppState(AppState.ERROR);
         }
-    }, [appState, cleanupAudio]);
-    
+    }, []);
 
-    // função para iniciar a gravação
+    const stopRecording = useCallback(() => {
+        if (appState !== AppState.RECORDING) return;
+        cleanupAudio();
+    }, [appState, cleanupAudio]);
+
+    const handleStopAndProcess = useCallback(async () => {
+        if (appState !== AppState.RECORDING) return;
+        stopRecording();
+        await processTranscription(fullTranscriptionRef.current);
+    }, [appState, stopRecording, processTranscription]);
+
+    const switchToEdit = useCallback(() => {
+        if (appState === AppState.RECORDING) {
+            stopRecording();
+        }
+        setEditedTranscription(fullTranscriptionRef.current);
+        setAppState(AppState.EDITING);
+    }, [appState, stopRecording]);
+    
     const handleStartRecording = useCallback(async () => {
         setAppState(AppState.RECORDING);
         setError(null);
         setTranscription('');
+        setEditedTranscription('');
         fullTranscriptionRef.current = '';
 
         try {
@@ -105,13 +112,14 @@ export const useMedCopilot = () => {
                 onError: (e: ErrorEvent) => {
                     console.error('Live session error:', e);
                     setError('Ocorreu um erro durante a transcrição. Tente novamente.');
-                    handleStopRecording(true);
+                    stopRecording();
+                    setAppState(AppState.ERROR);
                 },
                 onClose: () => console.log('Live session closed.'),
             });
 
-            const AudioContextClass = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
-            const context = new AudioContextClass({ sampleRate: 16000 });
+            const AudioContextConstructor = window.AudioContext || (window as typeof window & { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+            const context = new AudioContextConstructor({ sampleRate: 16000 });
             audioContextRef.current = context;
             
             const source = context.createMediaStreamSource(stream);
@@ -131,17 +139,24 @@ export const useMedCopilot = () => {
             source.connect(processor);
             processor.connect(context.destination);
 
-        } catch (err) {
+        } catch (err)
+ {
             console.error('Failed to start recording:', err);
             setError('Não foi possível acessar o microfone. Verifique as permissões do seu navegador.');
             setAppState(AppState.IDLE);
         }
-    }, [handleStopRecording]);
+    }, [stopRecording]);
+
+    const generateFromEdited = useCallback(async () => {
+        if (appState !== AppState.EDITING) return;
+        await processTranscription(editedTranscription);
+    }, [appState, editedTranscription, processTranscription]);
 
     const handleReset = () => {
         cleanupAudio();
         setAppState(AppState.IDLE);
         setTranscription('');
+        setEditedTranscription('');
         setDiagnosis(null);
         setError(null);
         fullTranscriptionRef.current = '';
@@ -150,11 +165,15 @@ export const useMedCopilot = () => {
     return {
         appState,
         transcription,
+        editedTranscription,
         diagnosis,
         error,
         actions: {
             start: handleStartRecording,
-            stop: () => handleStopRecording(false),
+            stopAndProcess: handleStopAndProcess,
+            switchToEdit,
+            generateFromEdited,
+            setEditedTranscription,
             reset: handleReset,
         },
     };

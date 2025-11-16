@@ -9,6 +9,7 @@ export interface DiagnosisReport {
 export const AppState = {
   IDLE: 'IDLE',
   RECORDING: 'RECORDING',
+  EDITING: 'EDITING',
   PROCESSING: 'PROCESSING',
   RESULT: 'RESULT',
   ERROR: 'ERROR',

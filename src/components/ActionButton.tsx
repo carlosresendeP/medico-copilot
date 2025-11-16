@@ -1,15 +1,16 @@
 import React from 'react';
 import { AppState } from '../types';
-import { Mic, StopCircle, RefreshCcw } from 'lucide-react';
+import { Mic, StopCircle, RefreshCcw, FileText } from 'lucide-react';
 
 interface ActionButtonProps {
     appState: AppState;
     onStart: () => void;
     onStop: () => void;
+    onGenerate: () => void;
     onReset: () => void;
 }
 
-export const ActionButton: React.FC<ActionButtonProps> = ({ appState, onStart, onStop, onReset }) => {
+export const ActionButton: React.FC<ActionButtonProps> = ({ appState, onStart, onStop, onGenerate, onReset }) => {
     const renderButton = () => {
         switch (appState) {
             case AppState.IDLE:
@@ -24,6 +25,13 @@ export const ActionButton: React.FC<ActionButtonProps> = ({ appState, onStart, o
                     <button onClick={onStop} className="flex items-center justify-center px-8 py-4 bg-red-600 text-white font-bold rounded-full shadow-lg hover:bg-red-700 transition-all duration-300 transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-red-300 dark:focus:ring-red-800">
                         <StopCircle className="w-6 h-6 mr-3" />
                         Finalizar Consulta
+                    </button>
+                );
+            case AppState.EDITING:
+                 return (
+                    <button onClick={onGenerate} className="flex items-center justify-center px-8 py-4 bg-green-600 text-white font-bold rounded-full shadow-lg hover:bg-green-700 transition-all duration-300 transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-green-300 dark:focus:ring-green-800">
+                        <FileText className="w-6 h-6 mr-3" />
+                        Gerar Diagnóstico
                     </button>
                 );
             case AppState.RESULT:

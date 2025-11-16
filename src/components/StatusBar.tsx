@@ -21,6 +21,8 @@ export const StatusBar: React.FC<StatusBarProps> = ({ appState }) => {
         switch(appState) {
             case AppState.RECORDING:
                 return "Consulta em Andamento";
+            case AppState.EDITING:
+                return "Editando Transcrição";
             case AppState.PROCESSING:
                 return "Analisando Consulta";
             default:
