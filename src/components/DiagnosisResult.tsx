@@ -16,7 +16,7 @@ const DiagnosisSection: React.FC<DiagnosisSectionProps> = ({ title, content }) =
             <ul className="space-y-2">
                 {content.map((item, index) => (
                     <li key={index} className="flex items-start">
-                        <Check className="w-5 h-5 text-green-500 mr-2 mt-1 flex-shrink-0" />
+                        <Check className="w-5 h-5 text-green-500 mr-2 mt-1 flex" />
                         <span className="text-slate-600 dark:text-slate-300">{item}</span>
                     </li>
                 ))}

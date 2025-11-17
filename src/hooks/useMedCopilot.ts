@@ -1,180 +1,127 @@
-import { useState, useRef, useCallback } from 'react';
-import { LiveServerMessage } from '@google/genai';
-import { AppState, type DiagnosisReport } from '../types';
-import { connectForTranscription, generateDiagnosisFromText } from '../services/geminiService';
-import { createBlob } from '../utils/audioUtils';
-import type { Blob } from '@google/genai';
+import { useState, useRef, useCallback } from "react";
+import { generateDiagnosis } from "../services/diagnose.service";
+import { api } from "../services/api";
 
-type LiveSession = {
-    close: () => void;
-    sendRealtimeInput: (input: { media: Blob }) => void;
-};
+export interface UseMedCopilot {
+  isConnected: boolean;
+  transcript: string;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  diagnosis: any | null;
+  isDiagnosing: boolean;
+  error: string | null;
 
-export const useMedCopilot = () => {
-    const [appState, setAppState] = useState<AppState>(AppState.IDLE);
-    const [transcription, setTranscription] = useState<string>('');
-    const [editedTranscription, setEditedTranscription] = useState('');
-    const [diagnosis, setDiagnosis] = useState<DiagnosisReport | null>(null);
-    const [error, setError] = useState<string | null>(null);
+  start: () => void;
+  stop: () => void;
+  sendTextForDiagnosis: (text: string) => Promise<void>;
+}
 
-    const sessionPromiseRef = useRef<Promise<LiveSession> | null>(null);
-    const audioContextRef = useRef<AudioContext | null>(null);
-    const scriptProcessorRef = useRef<ScriptProcessorNode | null>(null);
-    const mediaStreamSourceRef = useRef<MediaStreamAudioSourceNode | null>(null);
-    const mediaStreamRef = useRef<MediaStream | null>(null);
-    const fullTranscriptionRef = useRef<string>('');
+export function useMedCopilot(): UseMedCopilot {
+  const [isConnected, setIsConnected] = useState(false);
+  const [transcript, setTranscript] = useState("");
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [diagnosis, setDiagnosis] = useState<any | null>(null);
+  const [isDiagnosing, setIsDiagnosing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-    const cleanupAudio = useCallback(() => {
-        if (mediaStreamRef.current) {
-            mediaStreamRef.current.getTracks().forEach(track => track.stop());
-            mediaStreamRef.current = null;
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+
+  // -----------------------------------------------------------
+  // 1. INICIAR GRAVAÇÃO DE ÁUDIO
+  // -----------------------------------------------------------
+  const start = useCallback(async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream);
+
+      mediaRecorderRef.current = mediaRecorder;
+      audioChunksRef.current = [];
+
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          audioChunksRef.current.push(event.data);
         }
+      };
 
-        if (audioContextRef.current) {
-            if (mediaStreamSourceRef.current && scriptProcessorRef.current) {
-                mediaStreamSourceRef.current.disconnect(scriptProcessorRef.current);
-                scriptProcessorRef.current.disconnect(audioContextRef.current.destination);
-            }
-            if (audioContextRef.current.state !== 'closed') {
-                audioContextRef.current.close().catch(console.error);
-            }
-        }
-        scriptProcessorRef.current = null;
-        mediaStreamSourceRef.current = null;
-        audioContextRef.current = null;
+      mediaRecorder.onstop = async () => {
+        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/wav' });
 
-        if (sessionPromiseRef.current) {
-            sessionPromiseRef.current.then(session => session.close()).catch(console.error);
-            sessionPromiseRef.current = null;
-        }
-    }, []);
+        console.log('🎤 Gravação finalizada. Tamanho do áudio:', audioBlob.size, 'bytes');
 
-    const processTranscription = useCallback(async (text: string) => {
-        if (text.trim().length < 10) {
-            setError('A transcrição é muito curta para gerar um diagnóstico. Fale ou escreva um pouco mais.');
-            setAppState(AppState.ERROR);
-            return;
-        }
-        
-        setAppState(AppState.PROCESSING);
+        // Enviar para o backend
+        const formData = new FormData();
+        formData.append('file', audioBlob, 'audio.wav');
+
         try {
-            const result = await generateDiagnosisFromText(text);
-            setDiagnosis(result);
-            setAppState(AppState.RESULT);
+          console.log('📤 Enviando áudio para transcrição...');
+          const response = await api.post('/api/transcribe', formData, {
+            headers: {
+              'Content-Type': 'multipart/form-data',
+            },
+          });
+
+          console.log('✅ Resposta do backend:', response.data);
+          const transcriptText = response.data.transcript || response.data.transcription || '';
+          console.log('📝 Transcrição recebida:', transcriptText);
+          setTranscript(transcriptText);
         } catch (err) {
-            console.error('Failed to generate diagnosis:', err);
-            setError('A IA não conseguiu gerar um diagnóstico. Por favor, tente novamente com uma transcrição mais clara.');
-            setAppState(AppState.ERROR);
+          console.error('❌ Erro ao transcrever:', err);
+          setError('Erro ao transcrever áudio');
         }
-    }, []);
 
-    const stopRecording = useCallback(() => {
-        if (appState !== AppState.RECORDING) return;
-        cleanupAudio();
-    }, [appState, cleanupAudio]);
+        // Parar todas as tracks
+        stream.getTracks().forEach(track => track.stop());
+      };
 
-    const handleStopAndProcess = useCallback(async () => {
-        if (appState !== AppState.RECORDING) return;
-        stopRecording();
-        await processTranscription(fullTranscriptionRef.current);
-    }, [appState, stopRecording, processTranscription]);
+      mediaRecorder.start();
+      setIsConnected(true);
+      console.log("🎤 Gravação iniciada");
+    } catch (err) {
+      console.error('Erro ao acessar microfone:', err);
+      setError('Erro ao acessar microfone');
+    }
+  }, []);
 
-    const switchToEdit = useCallback(() => {
-        if (appState === AppState.RECORDING) {
-            stopRecording();
-        }
-        setEditedTranscription(fullTranscriptionRef.current);
-        setAppState(AppState.EDITING);
-    }, [appState, stopRecording]);
-    
-    const handleStartRecording = useCallback(async () => {
-        setAppState(AppState.RECORDING);
-        setError(null);
-        setTranscription('');
-        setEditedTranscription('');
-        fullTranscriptionRef.current = '';
+  // -----------------------------------------------------------
+  // 2. PARAR GRAVAÇÃO
+  // -----------------------------------------------------------
+  const stop = useCallback(() => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      mediaRecorderRef.current.stop();
+      setIsConnected(false);
+    }
+  }, []);
 
-        try {
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            mediaStreamRef.current = stream;
+  // -----------------------------------------------------------
+  // 3. ENVIAR TEXTO PARA O BACKEND DIAGNOSTICAR
+  // -----------------------------------------------------------
+  const sendTextForDiagnosis = useCallback(async (text: string) => {
+    try {
+      console.log('📋 Enviando texto para diagnóstico:', text.substring(0, 100) + '...');
+      setIsDiagnosing(true);
+      setError(null);
 
-            sessionPromiseRef.current = connectForTranscription({
-                onOpen: () => console.log('Live session opened.'),
-                onMessage: (message: LiveServerMessage) => {
-                    if (message.serverContent?.inputTranscription) {
-                        const text = message.serverContent.inputTranscription.text;
-                        if (text) {
-                            fullTranscriptionRef.current += text;
-                            setTranscription(fullTranscriptionRef.current);
-                        }
-                    }
-                },
-                onError: (e: ErrorEvent) => {
-                    console.error('Live session error:', e);
-                    setError('Ocorreu um erro durante a transcrição. Tente novamente.');
-                    stopRecording();
-                    setAppState(AppState.ERROR);
-                },
-                onClose: () => console.log('Live session closed.'),
-            });
+      const result = await generateDiagnosis(text);
+      console.log('✅ Resultado do diagnóstico:', result);
 
-            const AudioContextConstructor = window.AudioContext || (window as typeof window & { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
-            const context = new AudioContextConstructor({ sampleRate: 16000 });
-            audioContextRef.current = context;
-            
-            const source = context.createMediaStreamSource(stream);
-            mediaStreamSourceRef.current = source;
+      setDiagnosis(result);
+    } catch (err) {
+      console.error('❌ Erro ao gerar diagnóstico:', err);
+      setError("Erro ao gerar diagnóstico");
+      throw err;
+    } finally {
+      setIsDiagnosing(false);
+    }
+  }, []);
 
-            const processor = context.createScriptProcessor(4096, 1, 1);
-            scriptProcessorRef.current = processor;
-
-            processor.onaudioprocess = (audioProcessingEvent) => {
-                const inputData = audioProcessingEvent.inputBuffer.getChannelData(0);
-                const pcmBlob = createBlob(inputData);
-                sessionPromiseRef.current?.then((session) => {
-                   session.sendRealtimeInput({ media: pcmBlob });
-                });
-            };
-
-            source.connect(processor);
-            processor.connect(context.destination);
-
-        } catch (err)
- {
-            console.error('Failed to start recording:', err);
-            setError('Não foi possível acessar o microfone. Verifique as permissões do seu navegador.');
-            setAppState(AppState.IDLE);
-        }
-    }, [stopRecording]);
-
-    const generateFromEdited = useCallback(async () => {
-        if (appState !== AppState.EDITING) return;
-        await processTranscription(editedTranscription);
-    }, [appState, editedTranscription, processTranscription]);
-
-    const handleReset = () => {
-        cleanupAudio();
-        setAppState(AppState.IDLE);
-        setTranscription('');
-        setEditedTranscription('');
-        setDiagnosis(null);
-        setError(null);
-        fullTranscriptionRef.current = '';
-    };
-
-    return {
-        appState,
-        transcription,
-        editedTranscription,
-        diagnosis,
-        error,
-        actions: {
-            start: handleStartRecording,
-            stopAndProcess: handleStopAndProcess,
-            switchToEdit,
-            generateFromEdited,
-            setEditedTranscription,
-            reset: handleReset,
-        },
-    };
-};
+  return {
+    isConnected,
+    transcript,
+    diagnosis,
+    isDiagnosing,
+    error,
+    start,
+    stop,
+    sendTextForDiagnosis,
+  };
+}

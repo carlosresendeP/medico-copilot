@@ -9,9 +9,9 @@ interface TranscriptionViewProps {
     onTextChange: (value: string) => void;
 }
 
-export const TranscriptionView: React.FC<TranscriptionViewProps> = ({ 
-    transcription, 
-    editedTranscription, 
+export const TranscriptionView: React.FC<TranscriptionViewProps> = ({
+    transcription,
+    editedTranscription,
     isEditing,
     onToggleEdit,
     onTextChange
@@ -35,7 +35,7 @@ export const TranscriptionView: React.FC<TranscriptionViewProps> = ({
                 />
             ) : (
                 <p className="text-slate-600 dark:text-slate-300 whitespace-pre-wrap overflow-y-auto h-full pr-10">
-                    {transcription || "A transcrição da consulta aparecerá aqui em tempo real..."}
+                    {editedTranscription || transcription || "A transcrição da consulta aparecerá aqui em tempo real..."}
                 </p>
             )}
         </div>
