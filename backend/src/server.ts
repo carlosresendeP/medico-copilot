@@ -1,5 +1,7 @@
 import app from "./app";
 
-app.listen({ port: 3333 }).then(() => {
-  console.log(" 🟩🟩🟩 Server running on");
+const PORT = Number(process.env.PORT) || 3333;
+
+app.listen({ port: PORT }).then(() => {
+  console.log(`🟩🟩🟩 Server running on port ${PORT}`);
 });
