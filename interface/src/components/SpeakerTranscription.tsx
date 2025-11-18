@@ -25,7 +25,7 @@ export const SpeakerTranscription: React.FC<SpeakerTranscriptionProps> = ({ spea
                                     : 'bg-green-900/20'
                                 }`}
                         >
-                            <div className="flex-shrink-0">
+                            <div className="shrink-0">
                                 {isDoctor ? (
                                     <Stethoscope className={`w-5 h-5 text-blue-400`} />
                                 ) : (

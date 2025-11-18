@@ -18,7 +18,7 @@ export const ActionButton: React.FC<ActionButtonProps> = ({ appState, onStart, o
         switch (appState) {
             case AppState.IDLE:
                 return (
-                    <button onClick={onStart} className="flex items-center justify-center px-8 py-4 bg-blue-600 text-white font-bold rounded-full shadow-lg hover:bg-blue-700 transition-all duration-300 transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-blue-300 focus:ring-blue-800">
+                    <button onClick={onStart} className="flex items-center justify-center px-8 py-4 bg-blue-600 text-white font-bold rounded-full shadow-lg hover:bg-blue-700 transition-all duration-300 transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-blue-800">
                         <Mic className="w-6 h-6 mr-3" />
                         {t('button.start')}
                     </button>
