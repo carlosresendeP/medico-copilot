@@ -13,7 +13,8 @@ Retorne APENAS um JSON válido no seguinte formato exato:
   "probable_diagnosis": "Diagnóstico mais provável baseado nos sintomas",
   "associated_diseases": ["Doença 1", "Doença 2", "Doença 3"],
   "suggested_exams": ["Exame 1", "Exame 2", "Exame 3"],
-  "common_medications": ["Medicamento 1", "Medicamento 2", "Medicamento 3"]
+  "common_medications": ["Medicamento 1", "Medicamento 2", "Medicamento 3"],
+  "reasoning": "Explique detalhadamente o raciocínio médico que levou a este diagnóstico, incluindo: 1) Sintomas identificados, 2) Relação com o diagnóstico, 3) Por que foram sugeridos estes exames, 4) Justificativa dos medicamentos"
 }
 `;
 

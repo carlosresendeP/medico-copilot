@@ -2,9 +2,16 @@ import { useState, useRef, useCallback } from "react";
 import { generateDiagnosis } from "../services/diagnose.service";
 import { api } from "../services/api";
 
+interface SpeakerSegment {
+  speaker: string;
+  text: string;
+}
+
 export interface UseMedCopilot {
   isConnected: boolean;
   transcript: string;
+  speakers: SpeakerSegment[];
+  hasSpeakers: boolean;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   diagnosis: any | null;
   isDiagnosing: boolean;
@@ -18,6 +25,8 @@ export interface UseMedCopilot {
 export function useMedCopilot(): UseMedCopilot {
   const [isConnected, setIsConnected] = useState(false);
   const [transcript, setTranscript] = useState("");
+  const [speakers, setSpeakers] = useState<SpeakerSegment[]>([]);
+  const [hasSpeakers, setHasSpeakers] = useState(false);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [diagnosis, setDiagnosis] = useState<any | null>(null);
   const [isDiagnosing, setIsDiagnosing] = useState(false);
@@ -64,6 +73,16 @@ export function useMedCopilot(): UseMedCopilot {
           const transcriptText = response.data.transcript || response.data.transcription || '';
           console.log('📝 Transcrição recebida:', transcriptText);
           setTranscript(transcriptText);
+
+          // Atualizar speakers se disponível
+          if (response.data.speakers) {
+            console.log('👥 Falantes identificados:', response.data.speakers);
+            setSpeakers(response.data.speakers);
+            setHasSpeakers(true);
+          } else {
+            setSpeakers([]);
+            setHasSpeakers(false);
+          }
         } catch (err) {
           console.error('❌ Erro ao transcrever:', err);
           setError('Erro ao transcrever áudio');
@@ -117,6 +136,8 @@ export function useMedCopilot(): UseMedCopilot {
   return {
     isConnected,
     transcript,
+    speakers,
+    hasSpeakers,
     diagnosis,
     isDiagnosing,
     error,

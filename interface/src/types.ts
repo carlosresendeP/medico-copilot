@@ -4,6 +4,7 @@ export interface DiagnosisReport {
   associated_diseases: string[];
   suggested_exams: string[];
   common_medications: string[];
+  reasoning?: string;
 }
 
 export const AppState = {

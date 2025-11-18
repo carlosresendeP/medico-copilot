@@ -4,21 +4,33 @@ import { StatusBar, ProcessingView, ErrorView } from "../components/StatusBar";
 import { TranscriptionView } from "../components/TranscriptionView";
 import { ActionButton } from "../components/ActionButton";
 import { DiagnosisResult } from "../components/DiagnosisResult";
+import { HistoryPanel } from "../components/HistoryPanel";
+import { PrescriptionModal } from "../components/PrescriptionModal";
 
 // Tipos
 import { AppState } from "../types";
+import type { Consultation } from "../types/consultation";
 
 // Hooks
 import { useMedCopilot } from "../hooks/useMedCopilot";
+
+// Services
+import { consultationService } from "../services/consultation.service";
+import { PrescriptionService } from "../services/prescription.service";
 
 function Home() {
     const [appState, setAppState] = useState<AppState>(AppState.IDLE);
     const [editedTranscription, setEditedTranscription] = useState("");
     const [isEditing, setIsEditing] = useState(false);
+    const [showHistory, setShowHistory] = useState(false);
+    const [showPrescriptionModal, setShowPrescriptionModal] = useState(false);
+    const [currentConsultationId, setCurrentConsultationId] = useState<string | null>(null);
 
     // Hook do Gemini Live
     const {
         transcript,
+        speakers,
+        hasSpeakers,
         diagnosis,
         error,
         start,
@@ -82,6 +94,17 @@ function Home() {
             await sendTextForDiagnosis(textToAnalyze);
             console.log('✅ Diagnóstico processado, mudando para RESULT');
             setAppState(AppState.RESULT);
+
+            // Salvar consulta no histórico
+            const consultationId = currentConsultationId || Date.now().toString();
+            consultationService.save({
+                id: consultationId,
+                date: new Date().toISOString(),
+                transcript: textToAnalyze,
+                speakers: hasSpeakers ? speakers : undefined,
+                diagnosis: diagnosis || undefined
+            });
+            setCurrentConsultationId(consultationId);
         } catch (err) {
             console.error('❌ Erro ao gerar diagnóstico:', err);
             setAppState(AppState.ERROR);
@@ -93,11 +116,44 @@ function Home() {
         setEditedTranscription("");
         setIsEditing(false);
         setAppState(AppState.IDLE);
+        setCurrentConsultationId(null);
+    };
+
+    const handleOpenHistory = () => {
+        setShowHistory(true);
+    };
+
+    const handleLoadConsultation = (consultation: Consultation) => {
+        setEditedTranscription(consultation.transcript);
+        setCurrentConsultationId(consultation.id);
+        setShowHistory(false);
+
+        if (consultation.diagnosis) {
+            setAppState(AppState.RESULT);
+        } else {
+            setAppState(AppState.EDITING);
+        }
+    };
+
+    const handleGeneratePrescription = (patientName: string, doctorName: string) => {
+        if (!diagnosis) return;
+
+        const textToAnalyze = editedTranscription.trim() || transcript.trim();
+
+        PrescriptionService.generatePDF({
+            patientName: patientName || undefined,
+            doctorName: doctorName || undefined,
+            diagnosis,
+            transcription: textToAnalyze,
+            date: new Date()
+        });
+
+        setShowPrescriptionModal(false);
     };
 
     return (
         <Layout>
-            <StatusBar appState={appState} />
+            <StatusBar appState={appState} onOpenHistory={handleOpenHistory} />
 
             {/* Caixa de transcrição sempre visível, exceto em estados específicos */}
             {appState !== AppState.PROCESSING && appState !== AppState.RESULT && appState !== AppState.ERROR && (
@@ -107,6 +163,8 @@ function Home() {
                     isEditing={isEditing}
                     onToggleEdit={handleToggleEdit}
                     onTextChange={setEditedTranscription}
+                    speakers={speakers}
+                    hasSpeakers={hasSpeakers}
                 />
             )}
 
@@ -119,7 +177,10 @@ function Home() {
             )}
 
             {appState === AppState.RESULT && diagnosis && (
-                <DiagnosisResult report={diagnosis} />
+                <DiagnosisResult
+                    report={diagnosis}
+                    onGeneratePrescription={() => setShowPrescriptionModal(true)}
+                />
             )}
 
             {/* Botão principal */}
@@ -130,6 +191,22 @@ function Home() {
                 onGenerate={handleGenerate}
                 onReset={handleReset}
             />
+
+            {/* Painel de Histórico */}
+            {showHistory && (
+                <HistoryPanel
+                    onOpen={handleLoadConsultation}
+                    onClose={() => setShowHistory(false)}
+                />
+            )}
+
+            {/* Modal de Receita */}
+            {showPrescriptionModal && (
+                <PrescriptionModal
+                    onGenerate={handleGeneratePrescription}
+                    onClose={() => setShowPrescriptionModal(false)}
+                />
+            )}
         </Layout>
     );
 }
