@@ -51,7 +51,7 @@ export const ActionButton: React.FC<ActionButtonProps> = ({
                             transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-blue-800"
                     >
                         <Mic className="w-6 h-6 mr-3" />
-                        {t('button.start')}
+                        {t('start')}
                     </button>
                 );
 
@@ -64,7 +64,7 @@ export const ActionButton: React.FC<ActionButtonProps> = ({
                             transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-red-800"
                     >
                         <StopCircle className="w-6 h-6 mr-3" />
-                        {t('button.stop')}
+                        {t('Parar')}
                     </button>
                 );
 
@@ -77,7 +77,7 @@ export const ActionButton: React.FC<ActionButtonProps> = ({
                             transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-green-800"
                     >
                         <FileText className="w-6 h-6 mr-3" />
-                        {t('button.generate')}
+                        {t('Gerar')}
                     </button>
                 );
 
@@ -91,7 +91,7 @@ export const ActionButton: React.FC<ActionButtonProps> = ({
                             transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-slate-800"
                     >
                         <RefreshCcw className="w-6 h-6 mr-3" />
-                        {t('button.new')}
+                        {t('Novo')}
                     </button>
                 );
 
@@ -103,7 +103,7 @@ export const ActionButton: React.FC<ActionButtonProps> = ({
                             font-bold rounded-full shadow-inner cursor-not-allowed"
                     >
                         <Loader2 className="w-6 h-6 mr-3 animate-spin" />
-                        {t('button.processing')}
+                        {t('Processando...')}
                     </button>
                 );
         }
