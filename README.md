@@ -586,41 +586,7 @@ Geração automática de receitas médicas com:
 
 ---
 
-## 🗺️ Roadmap
 
-### Versão 1.1 (Próximo Release)
-- [ ] Autenticação de usuários
-- [ ] Banco de dados persistente
-- [ ] Exportar histórico para CSV
-- [ ] Temas claro/escuro
-- [ ] PWA (Progressive Web App)
-
-### Versão 2.0 (Futuro)
-- [ ] Integração com prontuários eletrônicos
-- [ ] Assinatura digital de receitas
-- [ ] Suporte a mais idiomas (ES, FR, DE)
-- [ ] Reconhecimento de voz em tempo real
-- [ ] Dashboard analítico para médicos
-- [ ] API pública com documentação Swagger
-
-### Melhorias Contínuas
-- [ ] Testes automatizados (Jest, Vitest)
-- [ ] CI/CD com GitHub Actions
-- [ ] Docker containerization
-- [ ] Monitoramento com Sentry
-- [ ] Performance optimization
-
----
-
-## 🤝 Contribuindo
-
-Contribuições são bem-vindas! Para contribuir:
-
-1. Faça um fork do projeto
-2. Crie uma branch para sua feature (`git checkout -b feature/AmazingFeature`)
-3. Commit suas mudanças (`git commit -m 'Add some AmazingFeature'`)
-4. Push para a branch (`git push origin feature/AmazingFeature`)
-5. Abra um Pull Request
 
 ### Diretrizes
 
@@ -691,22 +657,12 @@ SOFTWARE.
 
 **Link do Projeto**: [https://github.com/carlosresendeP/medico-copilot](https://github.com/carlosresendeP/medico-copilot)
 
----
-
-## 🙏 Agradecimentos
-
-- [OpenAI](https://openai.com/) - API Whisper e GPT
-- [Google](https://ai.google.dev/) - API Gemini
-- [Fastify](https://fastify.dev/) - Framework backend
-- [React](https://react.dev/) - Biblioteca UI
-- [Tailwind CSS](https://tailwindcss.com/) - Framework CSS
-- [jsPDF](https://github.com/parallax/jsPDF) - Geração de PDFs
 
 ---
 
 <div align="center">
 
-**Desenvolvido com ❤️ e IA por [Carlos Resende](https://github.com/carlosresendeP)**
+**Desenvolvido por [Carlos Resende](https://github.com/carlosresendeP)**
 
 ⭐ Se este projeto foi útil, considere dar uma estrela!
 
