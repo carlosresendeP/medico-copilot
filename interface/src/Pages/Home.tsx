@@ -35,7 +35,8 @@ function Home() {
         error,
         start,
         stop,
-        sendTextForDiagnosis
+        sendTextForDiagnosis,
+        isSendingAudio
     } = useMedCopilot();
 
     // -----------------------------
@@ -153,7 +154,7 @@ function Home() {
 
     return (
         <Layout>
-            <StatusBar appState={appState} onOpenHistory={handleOpenHistory} />
+            <StatusBar appState={appState} onOpenHistory={handleOpenHistory}  isSendingAudio={isSendingAudio} />
 
             {/* Caixa de transcrição sempre visível, exceto em estados específicos */}
             {appState !== AppState.PROCESSING && appState !== AppState.RESULT && appState !== AppState.ERROR && (
@@ -190,6 +191,7 @@ function Home() {
                 onStop={handleStop}
                 onGenerate={handleGenerate}
                 onReset={handleReset}
+                isSendingAudio={isSendingAudio} 
             />
 
             {/* Painel de Histórico */}

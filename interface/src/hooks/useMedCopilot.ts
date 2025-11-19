@@ -17,6 +17,9 @@ export interface UseMedCopilot {
   isDiagnosing: boolean;
   error: string | null;
 
+  // 🔥 ADICIONADO
+  isSendingAudio: boolean;
+
   start: () => void;
   stop: () => void;
   sendTextForDiagnosis: (text: string) => Promise<void>;
@@ -32,12 +35,12 @@ export function useMedCopilot(): UseMedCopilot {
   const [isDiagnosing, setIsDiagnosing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // 🔥 ADICIONADO
+  const [isSendingAudio, setIsSendingAudio] = useState(false);
+
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
 
-  // -----------------------------------------------------------
-  // 1. INICIAR GRAVAÇÃO DE ÁUDIO
-  // -----------------------------------------------------------
   const start = useCallback(async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -53,30 +56,33 @@ export function useMedCopilot(): UseMedCopilot {
       };
 
       mediaRecorder.onstop = async () => {
-        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/wav' });
+        const audioBlob = new Blob(audioChunksRef.current, { type: "audio/wav" });
 
-        console.log('🎤 Gravação finalizada. Tamanho do áudio:', audioBlob.size, 'bytes');
+        console.log("🎤 Gravação finalizada. Tamanho do áudio:", audioBlob.size, "bytes");
 
-        // Enviar para o backend
         const formData = new FormData();
-        formData.append('file', audioBlob, 'audio.wav');
+        formData.append("file", audioBlob, "audio.wav");
 
         try {
-          console.log('📤 Enviando áudio para transcrição...');
-          const response = await api.post('/api/transcribe', formData, {
+          console.log("📤 Enviando áudio para transcrição...");
+
+          //envia para a interface que está enviando
+          setIsSendingAudio(true);
+
+          const response = await api.post("/api/transcribe", formData, {
             headers: {
-              'Content-Type': 'multipart/form-data',
+              "Content-Type": "multipart/form-data",
             },
           });
 
-          console.log('✅ Resposta do backend:', response.data);
-          const transcriptText = response.data.transcript || response.data.transcription || '';
-          console.log('📝 Transcrição recebida:', transcriptText);
+          console.log("✅ Resposta do backend:", response.data);
+
+          const transcriptText =
+            response.data.transcript || response.data.transcription || "";
+
           setTranscript(transcriptText);
 
-          // Atualizar speakers se disponível
           if (response.data.speakers) {
-            console.log('👥 Falantes identificados:', response.data.speakers);
             setSpeakers(response.data.speakers);
             setHasSpeakers(true);
           } else {
@@ -84,48 +90,44 @@ export function useMedCopilot(): UseMedCopilot {
             setHasSpeakers(false);
           }
         } catch (err) {
-          console.error('❌ Erro ao transcrever:', err);
-          setError('Erro ao transcrever áudio');
+          console.error("❌ Erro ao transcrever:", err);
+          setError("Erro ao transcrever áudio");
+        } finally {
+          // 🔥 ADICIONADO — termina o envio
+          setIsSendingAudio(false);
         }
 
-        // Parar todas as tracks
-        stream.getTracks().forEach(track => track.stop());
+        stream.getTracks().forEach((track) => track.stop());
       };
 
       mediaRecorder.start();
       setIsConnected(true);
       console.log("🎤 Gravação iniciada");
     } catch (err) {
-      console.error('Erro ao acessar microfone:', err);
-      setError('Erro ao acessar microfone');
+      console.error("Erro ao acessar microfone:", err);
+      setError("Erro ao acessar microfone");
     }
   }, []);
 
-  // -----------------------------------------------------------
-  // 2. PARAR GRAVAÇÃO
-  // -----------------------------------------------------------
   const stop = useCallback(() => {
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
       mediaRecorderRef.current.stop();
       setIsConnected(false);
     }
   }, []);
 
-  // -----------------------------------------------------------
-  // 3. ENVIAR TEXTO PARA O BACKEND DIAGNOSTICAR
-  // -----------------------------------------------------------
   const sendTextForDiagnosis = useCallback(async (text: string) => {
     try {
-      console.log('📋 Enviando texto para diagnóstico:', text.substring(0, 100) + '...');
+      console.log("📋 Enviando texto para diagnóstico:", text.substring(0, 100) + "...");
       setIsDiagnosing(true);
       setError(null);
 
       const result = await generateDiagnosis(text);
-      console.log('✅ Resultado do diagnóstico:', result);
+      console.log("✅ Resultado do diagnóstico:", result);
 
       setDiagnosis(result);
     } catch (err) {
-      console.error('❌ Erro ao gerar diagnóstico:', err);
+      console.error("❌ Erro ao gerar diagnóstico:", err);
       setError("Erro ao gerar diagnóstico");
       throw err;
     } finally {
@@ -141,6 +143,7 @@ export function useMedCopilot(): UseMedCopilot {
     diagnosis,
     isDiagnosing,
     error,
+    isSendingAudio, 
     start,
     stop,
     sendTextForDiagnosis,

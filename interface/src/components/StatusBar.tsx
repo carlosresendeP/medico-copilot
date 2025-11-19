@@ -20,9 +20,9 @@ const RecordingIndicator: React.FC = () => {
 interface StatusBarProps {
     appState: AppState;
     onOpenHistory?: () => void;
-}
+    isSendingAudio?: boolean; }
 
-export const StatusBar: React.FC<StatusBarProps> = ({ appState, onOpenHistory }) => {
+export const StatusBar: React.FC<StatusBarProps> = ({ appState, onOpenHistory, isSendingAudio }) => {
     const { t } = useLanguage();
 
     const getTitle = () => {
@@ -43,9 +43,22 @@ export const StatusBar: React.FC<StatusBarProps> = ({ appState, onOpenHistory })
             <h2 className="text-2xl font-bold text-slate-200">
                 {getTitle()}
             </h2>
+
             <div className="flex items-center space-x-4">
+
+                
+                {isSendingAudio && (
+                    <div className="flex items-center gap-2 text-blue-400 animate-pulse">
+                        <div className="h-3 w-3 rounded-full bg-blue-400 animate-ping"></div>
+                        <span className="font-medium text-sm">{t('status.sendingAudio') || "Enviando áudio..."}</span>
+                    </div>
+                )}
+
+                {/* Indicador de gravação */}
                 {appState === AppState.RECORDING && <RecordingIndicator />}
+
                 <LanguageSwitcher />
+
                 {onOpenHistory && (
                     <button
                         onClick={onOpenHistory}
